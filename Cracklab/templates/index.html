@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CrackLab — Live Password Security &amp; Hashing Lab</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+  <script src="{{ url_for('static', filename='js/chart.umd.min.js') }}" defer></script>
+  <script src="{{ url_for('static', filename='js/app.js') }}" defer></script>
+</head>
+<body>
+  <!-- Persistent safety disclaimer -->
+  <div class="safety-banner" role="alert">
+    <span class="safety-dot"></span>
+    <strong>Educational demo. Do not enter your real passwords.</strong>
+    <span class="safety-sub">100% local &amp; offline (127.0.0.1) &bull; In-memory only &bull; Zero logging or storage</span>
+  </div>
+
+  <div class="container">
+    <!-- Hero & Real-World Breach Intro -->
+    <header class="hero">
+      <div class="hero-top">
+        <div>
+          <div class="brand-badge">OFFLINE SECURITY LAB // LOCALHOST</div>
+          <h1>Crack<span class="accent">Lab</span></h1>
+          <p class="subtitle">
+            See in real time why weak passwords and fast hashing fail — and how salts &amp; memory-hard algorithms stop attackers.
+          </p>
+        </div>
+        <div class="hero-actions">
+          <button id="demo-mode-btn" class="btn btn-demo" type="button">
+            <span class="btn-icon">&#9654;</span> Run Demo Mode (<code>{{ demo_password }}</code>)
+          </button>
+          <span class="demo-hint">One-click full walkthrough</span>
+        </div>
+      </div>
+
+      <div class="breach-callout">
+        <div class="breach-tag">REAL-WORLD BREACH EXAMPLE</div>
+        <p>
+          <strong>LinkedIn 2012 Unsalted SHA-1 Leak:</strong> Attackers stole ~6.5 million password hashes stored with
+          <em>unsalted SHA-1</em>. Because SHA-1 is blazingly fast and lacked unique salts, attackers used rainbow tables
+          and GPUs to crack roughly <strong>90% of the passwords within days</strong>.
+        </p>
+      </div>
+    </header>
+
+    <!-- Main Input Bar -->
+    <section class="card input-card">
+      <div class="input-header">
+        <label for="password-input" class="input-label">Test Password (processed in memory only)</label>
+        <div class="preset-group">
+          <span class="preset-label">Try presets:</span>
+          <button class="chip" type="button" data-preset="password123">password123</button>
+          <button class="chip" type="button" data-preset="qwerty2024">qwerty2024</button>
+          <button class="chip" type="button" data-preset="aaaaaa11">aaaaaa11</button>
+          <button class="chip" type="button" data-preset="Cedar!Lantern#84Orbit">Cedar!Lantern#84Orbit</button>
+        </div>
+      </div>
+
+      <div class="input-row">
+        <div class="password-wrap">
+          <input
+            id="password-input"
+            type="text"
+            maxlength="256"
+            autocomplete="off"
+            spellcheck="false"
+            placeholder="Type any sample password (e.g., password123, qwerty, or a 4-word passphrase)..."
+          />
+          <button id="toggle-visibility-btn" class="icon-btn" type="button" title="Toggle mask/reveal">Hide</button>
+        </div>
+        <button id="battle-btn" class="btn btn-primary" type="button">
+          Launch Cracking Battle
+        </button>
+      </div>
+      <div id="input-error" class="error-banner hidden" role="status"></div>
+    </section>
+
+    <!-- Grid: Feature 1 (Strength Analyzer) & Feature 2 (Hash Comparison) -->
+    <div class="grid-2">
+      <!-- 1. Password Strength Analyzer -->
+      <section class="card">
+        <div class="card-header">
+          <h2><span class="step-num">01</span> Password Strength Analyzer</h2>
+          <span id="strength-badge" class="pill pill-neutral">Waiting for input</span>
+        </div>
+
+        <div class="meter-track">
+          <div id="strength-bar" class="meter-fill" style="width: 0%;"></div>
+        </div>
+
+        <div class="strength-meta">
+          <span>Length: <strong id="strength-length">0</strong> chars</span>
+          <span>zxcvbn log<sub>10</sub> guesses: <strong id="strength-guesses">-</strong></span>
+          <span>In 10k leak list: <strong id="strength-leaked">-</strong></span>
+        </div>
+
+        <div class="analysis-columns">
+          <div>
+            <h3>Why it is weak / assessment</h3>
+            <ul id="strength-reasons" class="bullet-list">
+              <li class="muted">Type a password or click Demo Mode to analyze patterns.</li>
+            </ul>
+          </div>
+          <div>
+            <h3>Specific Improvement Tips</h3>
+            <ul id="strength-tips" class="bullet-list tips-list">
+              <li class="muted">Actionable suggestions will appear here.</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="why-box">
+          <strong>Why this matters:</strong> Attackers don't guess randomly from "aaa" to "zzz". They use leaked wordlists, keyboard walks (<code>qwerty</code>), and common suffix rules (<code>Word123</code>) first.
+        </div>
+      </section>
+
+      <!-- 2. Hash Comparison -->
+      <section class="card">
+        <div class="card-header">
+          <h2><span class="step-num">02</span> Hash Comparison (Measured Time)</h2>
+          <span class="pill pill-info">5 Algorithms</span>
+        </div>
+
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Algorithm</th>
+                <th>Measured Time</th>
+                <th>Status</th>
+                <th>Output Digest</th>
+              </tr>
+            </thead>
+            <tbody id="hash-table-body">
+              <tr>
+                <td colspan="4" class="muted center">Enter a password to compute MD5, SHA-1, SHA-256, bcrypt, and Argon2id hashes.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="why-box">
+          <strong>Why this matters:</strong> Fast hashes (MD5/SHA) are built for file checksums, not passwords. Password hashes like <code>bcrypt</code> and <code>Argon2id</code> are intentionally slow and expensive to crack.
+        </div>
+      </section>
+    </div>
+
+    <!-- 3. Salt Demo -->
+    <section class="card">
+      <div class="card-header">
+        <h2><span class="step-num">03</span> Salt Demo — Same Password Hashed Twice</h2>
+        <span class="pill pill-info">Identical vs Unique</span>
+      </div>
+      <p id="salt-explanation" class="lead-line">
+        A salt is a unique random string added to every password before hashing so identical passwords produce completely different hashes.
+      </p>
+
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Algorithm</th>
+              <th>Run #1 Output</th>
+              <th>Run #2 Output</th>
+              <th>Comparison</th>
+            </tr>
+          </thead>
+          <tbody id="salt-table-body">
+            <tr>
+              <td colspan="4" class="muted center">Enter a password to compare double-hashing with and without salts.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="why-box">
+        <strong>Why this matters:</strong> Without salts, two users with the same password share the exact same hash — letting attackers spot popular passwords instantly and crack millions at once.
+      </div>
+    </section>
+
+    <!-- 4. Live Cracking Battle (Main Feature) -->
+    <section class="card battle-card" id="battle-section">
+      <div class="card-header">
+        <h2><span class="step-num">04</span> Live Cracking Battle (Real Dictionary Attack)</h2>
+        <span class="pill pill-warn">{{ wordlist_size | int }} Wordlist Entries</span>
+      </div>
+
+      <div class="battle-grid">
+        <!-- MD5 Attacker -->
+        <div class="fighter fighter-danger">
+          <div class="fighter-head">
+            <div>
+              <h3>MD5 (Unsalted Legacy)</h3>
+              <span class="fighter-sub">Testing bundled {{ wordlist_size }} common passwords</span>
+            </div>
+            <span id="md5-battle-status" class="pill pill-neutral">Ready</span>
+          </div>
+          <div class="progress-track">
+            <div id="md5-progress-bar" class="progress-fill fill-danger" style="width: 0%;"></div>
+          </div>
+          <div class="fighter-stats">
+            <div class="stat">
+              <span class="stat-label">Timer <small>(Measured)</small></span>
+              <span id="md5-timer" class="stat-val">0.0 ms</span>
+            </div>
+            <div class="stat">
+              <span class="stat-label">Attempts</span>
+              <span id="md5-attempts" class="stat-val">0 / {{ wordlist_size }}</span>
+            </div>
+            <div class="stat">
+              <span class="stat-label">Speed <small>(Measured)</small></span>
+              <span id="md5-hps" class="stat-val">-</span>
+            </div>
+          </div>
+          <div id="md5-verdict" class="verdict-line muted">Click "Launch Cracking Battle" or Demo Mode to start.</div>
+        </div>
+
+        <!-- bcrypt Attacker -->
+        <div class="fighter fighter-safe">
+          <div class="fighter-head">
+            <div>
+              <h3>bcrypt (cost={{ bcrypt_rounds }}, Salted)</h3>
+              <span class="fighter-sub">Capped at 1.8s window so UI stays responsive</span>
+            </div>
+            <span id="bcrypt-battle-status" class="pill pill-neutral">Ready</span>
+          </div>
+          <div class="progress-track">
+            <div id="bcrypt-progress-bar" class="progress-fill fill-safe" style="width: 0%;"></div>
+          </div>
+          <div class="fighter-stats">
+            <div class="stat">
+              <span class="stat-label">Timer <small>(Measured)</small></span>
+              <span id="bcrypt-timer" class="stat-val">0.0 ms</span>
+            </div>
+            <div class="stat">
+              <span class="stat-label">Attempts</span>
+              <span id="bcrypt-attempts" class="stat-val">0 / {{ wordlist_size }}</span>
+            </div>
+            <div class="stat">
+              <span class="stat-label">Speed <small>(Measured)</small></span>
+              <span id="bcrypt-hps" class="stat-val">-</span>
+            </div>
+          </div>
+          <div id="bcrypt-verdict" class="verdict-line muted">Click "Launch Cracking Battle" or Demo Mode to start.</div>
+        </div>
+      </div>
+
+      <!-- Keyspace & Estimated Crack Time Table -->
+      <div class="estimates-panel">
+        <div class="estimates-header">
+          <h3>Brute-Force Crack Time Projection</h3>
+          <div id="keyspace-summary" class="muted">
+            Run a battle or benchmark to measure this CPU's speed and estimate brute-force crack times.
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Algorithm</th>
+                <th>CPU Speed <span class="tag-measured">Measured</span></th>
+                <th>Brute-Force Time <span class="tag-estimated">Estimated</span></th>
+              </tr>
+            </thead>
+            <tbody id="estimates-table-body">
+              <tr>
+                <td colspan="3" class="muted center">Waiting for battle / benchmark run...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="why-box">
+        <strong>Why this matters:</strong> On the exact same CPU, MD5 tests thousands of guesses in milliseconds while <code>bcrypt</code> crawls at only a handful per second — multiplying cracking costs by 100,000x+.
+      </div>
+    </section>
+
+    <!-- Grid: Feature 5 (Rainbow Table Demo) & Feature 6 (Speed Chart) -->
+    <div class="grid-2">
+      <!-- 5. Rainbow Table Demo -->
+      <section class="card">
+        <div class="card-header">
+          <h2><span class="step-num">05</span> Rainbow Table Lookup Demo</h2>
+          <button id="resalt-btn" class="btn btn-small" type="button">New Random Salt</button>
+        </div>
+        <p class="lead-line">
+          Precomputed lookup table of <strong><span id="rainbow-size">{{ wordlist_size }}</span></strong> unsalted MD5 hashes built in memory at startup.
+        </p>
+
+        <div class="rainbow-cards">
+          <div class="rainbow-box">
+            <div class="rainbow-top">
+              <strong>1. Unsalted MD5 Lookup</strong>
+              <span id="rainbow-unsalted-badge" class="pill pill-neutral">Pending</span>
+            </div>
+            <div class="mono-line">Hash: <code id="rainbow-unsalted-hash">-</code></div>
+            <div class="mono-line">Lookup time: <strong id="rainbow-unsalted-time">-</strong> &bull; Result: <strong id="rainbow-unsalted-result">-</strong></div>
+          </div>
+
+          <div class="rainbow-box">
+            <div class="rainbow-top">
+              <strong>2. Salted MD5 Lookup (<code>salt + password</code>)</strong>
+              <span id="rainbow-salted-badge" class="pill pill-neutral">Pending</span>
+            </div>
+            <div class="mono-line">Random salt: <code id="rainbow-salt-value">-</code></div>
+            <div class="mono-line">Salted hash: <code id="rainbow-salted-hash">-</code></div>
+            <div class="mono-line">Lookup time: <strong id="rainbow-salted-time">-</strong> &bull; Result: <strong id="rainbow-salted-result">-</strong></div>
+          </div>
+        </div>
+
+        <div class="why-box">
+          <strong>Why this matters:</strong> Precomputed rainbow tables trade disk space for instant O(1) cracking. Adding a unique random salt changes the hash completely, rendering precomputed tables useless.
+        </div>
+      </section>
+
+      <!-- 6. Speed Chart -->
+      <section class="card">
+        <div class="card-header">
+          <h2><span class="step-num">06</span> Speed Chart (This Machine's CPU)</h2>
+          <div class="chart-controls">
+            <button id="scale-toggle-btn" class="btn btn-small" type="button">Scale: Log</button>
+            <button id="rebenchmark-btn" class="btn btn-small" type="button">Re-Benchmark</button>
+          </div>
+        </div>
+        <p class="lead-line">
+          Real <span class="tag-measured">Measured</span> hashes per second on this computer's CPU (higher = easier for attackers to brute-force).
+        </p>
+
+        <div class="chart-container">
+          <canvas id="speed-chart"></canvas>
+        </div>
+
+        <div class="why-box">
+          <strong>Why this matters:</strong> The massive gap (millions/sec vs single-digits/sec) is deliberate. Even if an attacker steals your entire database, slow hashing buys users time to reset credentials.
+        </div>
+      </section>
+    </div>
+
+    <footer class="footer">
+      CrackLab &bull; Runs locally on <code>127.0.0.1:5000</code> &bull; Zero external CDNs &bull; Zero password persistence
+    </footer>
+  </div>
+</body>
+</html>
